@@ -43,11 +43,7 @@ void main() {
       }
     }
   ''';
-  readRepositoryData({
-    bool withTypenames = true,
-    bool withIds = true,
-    bool viewerHasStarred = false,
-  }) {
+  readRepositoryData({withTypenames = true, withIds = true}) {
     return {
       'viewer': {
         'repositories': {
@@ -55,17 +51,17 @@ void main() {
             {
               if (withIds) 'id': 'MDEwOlJlcG9zaXRvcnkyNDgzOTQ3NA==',
               'name': 'pq',
-              'viewerHasStarred': viewerHasStarred
+              'viewerHasStarred': false
             },
             {
               if (withIds) 'id': 'MDEwOlJlcG9zaXRvcnkzMjkyNDQ0Mw==',
               'name': 'go-evercookie',
-              'viewerHasStarred': viewerHasStarred
+              'viewerHasStarred': false
             },
             {
               if (withIds) 'id': 'MDEwOlJlcG9zaXRvcnkzNTA0NjgyNA==',
               'name': 'watchbot',
-              'viewerHasStarred': viewerHasStarred
+              'viewerHasStarred': false
             },
           ]
               .map((map) =>
@@ -86,8 +82,8 @@ void main() {
     }
   ''';
 
-  MockLink link;
-  GraphQLClient client;
+  late MockLink link;
+  late GraphQLClient client;
 
   group('simple json', () {
     setUp(() {
@@ -101,7 +97,7 @@ void main() {
 
     group('query', () {
       test('successful response', () async {
-        final _options = QueryOptions(
+        final WatchQueryOptions _options = WatchQueryOptions(
           document: parseString(readRepositories),
           variables: <String, dynamic>{
             'nRepositories': 42,
@@ -146,11 +142,11 @@ void main() {
         expect(r.data, equals(repoData));
 
         expect(
-          r.context.entry<HttpLinkResponseContext>().statusCode,
+          r.context.entry<HttpLinkResponseContext>()!.statusCode,
           equals(200),
         );
         expect(
-          r.context.entry<HttpLinkResponseContext>().headers['foo'],
+          r.context.entry<HttpLinkResponseContext>()!.headers['foo'],
           equals('bar'),
         );
       });
@@ -173,7 +169,7 @@ void main() {
           withIds: false,
         );
 
-        final _options = QueryOptions(
+        final WatchQueryOptions _options = WatchQueryOptions(
           document: readUnidentifiedRepositories,
           variables: {'nRepositories': 42},
         );
@@ -191,44 +187,9 @@ void main() {
         verify(link.request(_options.asRequest));
         expect(r.data, equals(repoData));
       });
-      test('correct consecutive responses', () async {
-        final _options = QueryOptions(
-          fetchPolicy: FetchPolicy.networkOnly,
-          document: parseString(readRepositories),
-          variables: <String, dynamic>{
-            'nRepositories': 42,
-          },
-        );
-        final firstData =
-            readRepositoryData(withTypenames: true, viewerHasStarred: false);
-        final secondData =
-            readRepositoryData(withTypenames: true, viewerHasStarred: true);
-
-        final resp = (d) => Stream.fromIterable([
-              Response(
-                data: d,
-                context: Context().withEntry(
-                  HttpLinkResponseContext(
-                    statusCode: 200,
-                    headers: {'foo': 'bar'},
-                  ),
-                ),
-              )
-            ]);
-
-        when(link.request(any)).thenAnswer((_) => resp(firstData));
-        QueryResult r = await client.query(_options);
-        expect(r.exception, isNull);
-        expect(r.data, equals(firstData));
-
-        when(link.request(any)).thenAnswer((_) => resp(secondData));
-        r = await client.query(_options);
-        expect(r.exception, isNull);
-        expect(r.data, equals(secondData));
-      });
 
       test('malformed server response', () async {
-        final _options = QueryOptions(
+        final WatchQueryOptions _options = WatchQueryOptions(
           document: parseString(readRepositories),
           variables: {'nRepositories': 42},
         );
@@ -236,7 +197,7 @@ void main() {
           'viewer': {
             // maybe the server doesn't validate response structures properly,
             // or a user generates a response on the client, etc
-            'repos': readRepositoryData()['viewer']['repositories']
+            'repos': readRepositoryData()['viewer']!['repositories']
           },
         };
 
@@ -276,7 +237,7 @@ void main() {
         );
 
         expect(
-          r.exception.linkException.originalException,
+          r.exception!.linkException!.originalException,
           e,
         );
       });
@@ -297,7 +258,7 @@ void main() {
         );
 
         expect(
-          r.exception.linkException.originalException,
+          r.exception!.linkException!.originalException,
           e,
         );
       });
@@ -347,12 +308,12 @@ void main() {
                 true,
               ),
               isA<QueryResult>().having(
-                (result) => result.data['single']['name'],
+                (result) => result.data!['single']['name'],
                 'initial query result',
                 'initialQueryName',
               ),
               isA<QueryResult>().having(
-                (result) => result.data['single']['name'],
+                (result) => result.data!['single']['name'],
                 'result caused by mutation',
                 'newNameFromMutation',
               )
@@ -382,7 +343,7 @@ void main() {
         final QueryResult response = await client.mutate(MutationOptions(
             document: parseString(writeSingle), variables: variables));
 
-        expect(response.data['updateSingle']['name'], variables['name']);
+        expect(response.data!['updateSingle']['name'], variables['name']);
       });
 
       test('successful mutation', () async {
@@ -425,8 +386,8 @@ void main() {
 
         expect(response.exception, isNull);
         expect(response.data, isNotNull);
-        final bool viewerHasStarred =
-            response.data['action']['starrable']['viewerHasStarred'] as bool;
+        final bool? viewerHasStarred =
+            response.data!['action']['starrable']['viewerHasStarred'] as bool?;
         expect(viewerHasStarred, true);
       });
 
@@ -460,7 +421,7 @@ void main() {
           fetchResults: false,
         ));
 
-        final result = await observableQuery.fetchResults().networkResult;
+        final result = await observableQuery.fetchResults().networkResult!;
 
         verify(
           link.request(
@@ -477,8 +438,8 @@ void main() {
 
         expect(result.hasException, isFalse);
         expect(result.data, isNotNull);
-        final bool viewerHasStarred =
-            result.data['action']['starrable']['viewerHasStarred'] as bool;
+        final bool? viewerHasStarred =
+            result.data!['action']['starrable']['viewerHasStarred'] as bool?;
         expect(viewerHasStarred, true);
       });
     });
@@ -528,12 +489,12 @@ void main() {
           emitsInOrder(
             [
               isA<QueryResult>().having(
-                (result) => result.data['item']['name'],
+                (result) => result.data!['item']['name'],
                 'first subscription item',
                 'first',
               ),
               isA<QueryResult>().having(
-                (result) => result.data['item']['name'],
+                (result) => result.data!['item']['name'],
                 'second subscription item',
                 'second',
               )
@@ -574,7 +535,7 @@ void main() {
           emitsInOrder(
             [
               isA<QueryResult>().having(
-                (result) => result.exception.linkException,
+                (result) => result.exception!.linkException,
                 'wrapped exception',
                 ex,
               ),
@@ -609,7 +570,7 @@ void main() {
           emitsInOrder(
             [
               isA<QueryResult>().having(
-                (result) => result.exception.linkException.originalException,
+                (result) => result.exception!.linkException!.originalException,
                 'wrapped exception',
                 err,
               ),
