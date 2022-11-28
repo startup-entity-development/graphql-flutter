@@ -162,12 +162,8 @@ class SocketClient {
   }
   //////////////////////////////////////////////////////////////////////
   ///
-  void onConnect(){
-
-  }                
-   void onDisConnect(){
-    
-  }   
+  void onConnect() {}
+  void onDisConnect() {}
   Uint8List? randomBytesForUuid;
   final String url;
   final Iterable<String>? protocols;
@@ -221,7 +217,6 @@ class SocketClient {
   ///
   /// If this instance is disposed, this method does nothing.
   Future<void> _connect() async {
-    onConnect();
     final InitOperation initOperation = await config.initOperation;
 
     if (_connectionStateController.isClosed) {
@@ -239,6 +234,7 @@ class SocketClient {
       socketChannel = await channel.forGraphQL();
       _connectionStateController.add(SocketConnectionState.connected);
       print('Connected to websocket.');
+      onConnect();
       _write(initOperation);
 
       if (config.inactivityTimeout != null) {
@@ -261,7 +257,6 @@ class SocketClient {
       }
     } catch (e) {
       onConnectionLost(e);
-
     }
   }
 
