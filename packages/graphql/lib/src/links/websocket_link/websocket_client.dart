@@ -160,7 +160,14 @@ class SocketClient {
   }) {
     _connect();
   }
+  //////////////////////////////////////////////////////////////////////
+  ///
+  void onConnect(){
 
+  }                
+   void onDisConnect(){
+    
+  }   
   Uint8List? randomBytesForUuid;
   final String url;
   final Iterable<String>? protocols;
@@ -214,6 +221,7 @@ class SocketClient {
   ///
   /// If this instance is disposed, this method does nothing.
   Future<void> _connect() async {
+    onConnect();
     final InitOperation initOperation = await config.initOperation;
 
     if (_connectionStateController.isClosed) {
@@ -253,10 +261,12 @@ class SocketClient {
       }
     } catch (e) {
       onConnectionLost(e);
+
     }
   }
 
   void onConnectionLost([e]) {
+    onDisConnect();
     socketChannel?.sink.close(ws_status.goingAway);
     if (e != null) {
       print('There was an error causing connection lost: $e');

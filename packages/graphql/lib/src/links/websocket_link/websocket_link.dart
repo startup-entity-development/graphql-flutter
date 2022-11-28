@@ -16,27 +16,28 @@ class WebSocketLink extends Link {
   WebSocketLink(
     this.url, {
     this.config = const SocketClientConfig(),
+    this.socketClient,
   });
 
   final String url;
   final SocketClientConfig config;
 
   // cannot be final because we're changing the instance upon a header change.
-  SocketClient? _socketClient;
+  SocketClient? socketClient;
 
   @override
   Stream<Response> request(Request request, [forward]) async* {
-    if (_socketClient == null) {
+    if (socketClient == null) {
       connectOrReconnect();
     }
 
-    yield* _socketClient!.subscribe(request, true);
+    yield* socketClient!.subscribe(request, true);
   }
 
   /// Connects or reconnects to the server with the specified headers.
   void connectOrReconnect() {
-    _socketClient?.dispose();
-    _socketClient = SocketClient(
+    socketClient?.dispose();
+    socketClient = SocketClient(
       url,
       config: config,
     );
@@ -45,7 +46,7 @@ class WebSocketLink extends Link {
   /// Disposes the underlying socket client explicitly. Only use this, if you want to disconnect from
   /// the current server in favour of another one. If that's the case, create a new [WebSocketLink] instance.
   Future<void> dispose() async {
-    await _socketClient?.dispose();
-    _socketClient = null;
+    await socketClient?.dispose();
+    socketClient = null;
   }
 }
